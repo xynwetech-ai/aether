@@ -4,9 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.aethlauncher.kyn.core.theme.AetherTheme
 import com.aethlauncher.kyn.core.utils.AetherLog
-import com.aethlauncher.kyn.ui.home.FoundationScreen
+import com.aethlauncher.kyn.ui.AetherRoot
 
 class MainActivity : ComponentActivity() {
 
@@ -15,10 +14,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         AetherLog.i("MainActivity dibuat")
 
+        val container = (application as AetherApp).container
         setContent {
-            AetherTheme {
-                FoundationScreen()
-            }
+            AetherRoot(container)
         }
     }
 }

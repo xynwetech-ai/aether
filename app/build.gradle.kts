@@ -12,8 +12,8 @@ android {
         applicationId = "com.aethlauncher.kyn"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "2.0.0-m0"
+        versionCode = 3
+        versionName = "2.0.0-m2"
     }
 
     buildFeatures {
@@ -50,9 +50,13 @@ android {
 
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.datastore.preferences)
 
     testImplementation(libs.junit)
 }
