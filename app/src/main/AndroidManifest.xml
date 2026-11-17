@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Gestur swipe bawah: membuka panel notifikasi (izin normal, bisa gagal di sebagian perangkat) -->
+    <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
+
     <!-- Package visibility: hanya aplikasi yang punya aksi MAIN/LAUNCHER, tanpa QUERY_ALL_PACKAGES -->
     <queries>
         <intent>

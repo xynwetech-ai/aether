@@ -12,8 +12,8 @@ android {
         applicationId = "com.aethlauncher.kyn"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "2.0.0-m2"
+        versionCode = 4
+        versionName = "2.0.0-rc1"
     }
 
     buildFeatures {

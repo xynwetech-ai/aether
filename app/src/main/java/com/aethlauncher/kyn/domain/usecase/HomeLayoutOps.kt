@@ -35,6 +35,39 @@ object HomeLayoutOps {
     fun moveDock(layout: HomeLayout, ref: ShortcutRef, delta: Int): HomeLayout =
         layout.copy(dock = layout.dock.moved(ref, delta))
 
+    fun removeEverywhere(layout: HomeLayout, ref: ShortcutRef): HomeLayout =
+        layout.copy(pages = layout.pages.map { it - ref }, dock = layout.dock - ref)
+
+    /**
+     * Menaruh [ref] di halaman [toPage]. Item dilepas dari posisi lamanya (halaman mana pun
+     * atau dock) lebih dulu; [storedIndex] dihitung terhadap daftar SETELAH item dilepas.
+     */
+    fun placeOnPage(layout: HomeLayout, ref: ShortcutRef, toPage: Int, storedIndex: Int): HomeLayout {
+        if (toPage !in layout.pages.indices) return layout
+        val cleaned = removeEverywhere(layout, ref)
+        val target = cleaned.pages[toPage].toMutableList()
+        target.add(storedIndex.coerceIn(0, target.size), ref)
+        return cleaned.copy(pages = cleaned.pages.replaceAt(toPage, target))
+    }
+
+    /**
+     * Menaruh [ref] di dock. Ditolak (layout tidak berubah) jika dock sudah penuh setelah
+     * item dilepas dari posisi lamanya; [visibleDockCountAfterRemoval] dihitung oleh pemanggil.
+     */
+    fun placeOnDock(
+        layout: HomeLayout,
+        ref: ShortcutRef,
+        storedIndex: Int,
+        capacity: Int,
+        visibleDockCountAfterRemoval: Int
+    ): HomeLayout {
+        if (visibleDockCountAfterRemoval >= capacity) return layout
+        val cleaned = removeEverywhere(layout, ref)
+        val dock = cleaned.dock.toMutableList()
+        dock.add(storedIndex.coerceIn(0, dock.size), ref)
+        return cleaned.copy(dock = dock)
+    }
+
     fun addPage(layout: HomeLayout): HomeLayout {
         if (layout.pages.size >= MAX_PAGES) return layout
         return layout.copy(pages = layout.pages + listOf(emptyList()))

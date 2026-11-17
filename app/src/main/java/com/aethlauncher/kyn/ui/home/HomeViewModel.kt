@@ -8,10 +8,9 @@ import com.aethlauncher.kyn.data.models.ShortcutRef
 import com.aethlauncher.kyn.domain.usecase.HomeLayoutOps
 import com.aethlauncher.kyn.launcher.resolver.AppIconLoader
 import com.aethlauncher.kyn.launcher.resolver.LaunchableApp
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -23,43 +22,61 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         .map<HomeLayout, HomeLayout?> { it }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    private val _apps = MutableStateFlow<List<LaunchableApp>>(emptyList())
-    val apps: StateFlow<List<LaunchableApp>> = _apps.asStateFlow()
+    /** Aplikasi yang boleh tampil: yang disembunyikan tidak pernah muncul di Home maupun picker. */
+    val apps: StateFlow<List<LaunchableApp>> = combine(
+        container.appsStore.apps,
+        container.appsRepository.prefs
+    ) { all, prefs -> all.filter { it.ref.key !in prefs.hidden } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    private val _appsLoaded = MutableStateFlow(false)
-    val appsLoaded: StateFlow<Boolean> = _appsLoaded.asStateFlow()
+    val appsLoaded: StateFlow<Boolean> = container.appsStore.loaded
 
-    val appsByKey: StateFlow<Map<String, LaunchableApp>> = _apps
+    val appsByKey: StateFlow<Map<String, LaunchableApp>> = apps
         .map { list -> list.associateBy { it.ref.key } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     val iconLoader: AppIconLoader get() = container.iconLoader
 
-    /** Dipanggil setiap Home kembali aktif. Observer instal/hapus aplikasi menyusul di Milestone 3. */
-    fun refreshApps() {
-        viewModelScope.launch {
-            _apps.value = container.appsResolver.queryAll()
-            _appsLoaded.value = true
-        }
-    }
-
     fun addToPage(page: Int, app: LaunchableApp) =
         updateLayout { HomeLayoutOps.addShortcut(it, page, app.ref) }
-
-    fun removeShortcut(page: Int, ref: ShortcutRef) =
-        updateLayout { HomeLayoutOps.removeShortcut(it, page, ref) }
-
-    fun moveShortcut(page: Int, ref: ShortcutRef, delta: Int) =
-        updateLayout { HomeLayoutOps.moveShortcut(it, page, ref, delta) }
 
     fun addToDock(app: LaunchableApp) =
         updateLayout { HomeLayoutOps.addDock(it, app.ref) }
 
-    fun removeFromDock(ref: ShortcutRef) =
-        updateLayout { HomeLayoutOps.removeDock(it, ref) }
+    fun removeEverywhere(ref: ShortcutRef) =
+        updateLayout { HomeLayoutOps.removeEverywhere(it, ref) }
 
-    fun moveDock(ref: ShortcutRef, delta: Int) =
-        updateLayout { HomeLayoutOps.moveDock(it, ref, delta) }
+    /**
+     * Drop di halaman. [visibleIndex] adalah indeks sel di grid; diterjemahkan ke indeks
+     * pada daftar tersimpan (yang bisa memuat aplikasi yang sudah tidak terpasang).
+     */
+    fun dropOnPage(ref: ShortcutRef, page: Int, visibleIndex: Int) {
+        val byKey = appsByKey.value
+        updateLayout { layout ->
+            val stored = layout.pages.getOrNull(page).orEmpty().filter { it != ref }
+            val visible = stored.filter { byKey.containsKey(it.key) }
+            val index = visibleIndex.coerceIn(0, visible.size)
+            val storedIndex = if (index < visible.size) stored.indexOf(visible[index]) else stored.size
+            HomeLayoutOps.placeOnPage(layout, ref, page, storedIndex)
+        }
+    }
+
+    fun dropOnDock(ref: ShortcutRef, visibleIndex: Int, capacity: Int) {
+        val byKey = appsByKey.value
+        updateLayout { layout ->
+            val stored = layout.dock.filter { it != ref }
+            val visible = stored.filter { byKey.containsKey(it.key) }
+            val index = visibleIndex.coerceIn(0, visible.size)
+            val storedIndex = if (index < visible.size) stored.indexOf(visible[index]) else stored.size
+            HomeLayoutOps.placeOnDock(layout, ref, storedIndex, capacity, visible.size)
+        }
+    }
+
+    fun hide(ref: ShortcutRef) {
+        viewModelScope.launch {
+            container.appsRepository.update { it.copy(hidden = it.hidden + ref.key) }
+        }
+    }
 
     private fun updateLayout(transform: (HomeLayout) -> HomeLayout) {
         viewModelScope.launch { container.layoutRepository.update(transform) }

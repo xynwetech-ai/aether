@@ -36,6 +36,10 @@ class LayoutRepository(context: Context) {
         }
     }
 
+    suspend fun reset() {
+        dataStore.edit { it.clear() }
+    }
+
     private fun Preferences.toLayout(): HomeLayout = HomeLayout(
         pages = HomeLayoutCodec.decodePages(this[PAGES]),
         dock = HomeLayoutCodec.decodeRefs(this[DOCK])

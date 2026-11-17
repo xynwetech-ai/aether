@@ -1,48 +1,54 @@
 package com.aethlauncher.kyn.ui.settings
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.aethlauncher.kyn.core.preferences.AppSettings
-import com.aethlauncher.kyn.ui.components.SectionTitle
+import com.aethlauncher.kyn.ui.components.HintText
+import com.aethlauncher.kyn.ui.components.SettingsCard
+import com.aethlauncher.kyn.ui.components.SliderRow
 import com.aethlauncher.kyn.ui.components.StepperRow
 import com.aethlauncher.kyn.ui.components.SwitchRow
-import kotlin.math.roundToInt
 
 @Composable
 fun DockSettings(settings: AppSettings, viewModel: SettingsViewModel) {
-    SectionTitle("Dock")
-    StepperRow(
-        title = "Jumlah ikon",
-        value = settings.dockCount,
-        range = AppSettings.MIN_DOCK..AppSettings.MAX_DOCK,
-        onValueChange = viewModel::setDockCount
-    )
-
-    // Nilai slider disimpan lokal selama digeser; baru ditulis ke DataStore saat dilepas.
-    var opacity by remember(settings.dockOpacityPercent) {
-        mutableFloatStateOf(settings.dockOpacityPercent.toFloat())
+    SettingsCard(title = "Tampilan dock") {
+        StepperRow(
+            title = "Jumlah ikon",
+            value = settings.dockCount,
+            range = AppSettings.MIN_DOCK..AppSettings.MAX_DOCK,
+            onValueChange = viewModel::setDockCount
+        )
+        SliderRow(
+            title = "Opasitas latar",
+            value = settings.dockOpacityPercent,
+            range = AppSettings.MIN_OPACITY..AppSettings.MAX_OPACITY,
+            onFinished = viewModel::setDockOpacity
+        )
+        SwitchRow(
+            title = "Tampilkan label di dock",
+            checked = settings.showDockLabels,
+            onCheckedChange = viewModel::setShowDockLabels
+        )
     }
-    Text(
-        text = "Opasitas latar: ${opacity.roundToInt()}%",
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onBackground
-    )
-    Slider(
-        value = opacity,
-        onValueChange = { opacity = it },
-        onValueChangeFinished = { viewModel.setDockOpacity(opacity.roundToInt()) },
-        valueRange = AppSettings.MIN_OPACITY.toFloat()..AppSettings.MAX_OPACITY.toFloat()
-    )
 
-    SwitchRow(
-        title = "Tampilkan label di dock",
-        checked = settings.showDockLabels,
-        onCheckedChange = viewModel::setShowDockLabels
-    )
+    SettingsCard(title = "Posisi dan ukuran") {
+        SliderRow("Posisi X", settings.dockXPercent, 0..100, viewModel::setDockX)
+        SliderRow("Posisi Y", settings.dockYPercent, 0..100, viewModel::setDockY)
+        SliderRow(
+            title = "Ukuran",
+            value = settings.dockScalePercent,
+            range = AppSettings.MIN_SCALE..AppSettings.MAX_SCALE,
+            onFinished = viewModel::setDockScale
+        )
+        OutlinedButton(
+            onClick = viewModel::resetDockGeometry,
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+        ) { Text("Reset posisi dan ukuran") }
+        HintText("Di Home, tekan lama latar dock untuk mengatur posisi dan ukurannya langsung lewat popup.")
+    }
 }
